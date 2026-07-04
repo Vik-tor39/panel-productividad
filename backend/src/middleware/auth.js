@@ -55,3 +55,11 @@ export function requireRole(role) {
     next();
   };
 }
+
+export function requireAdmin(req, res, next) {
+  const roles = extractRoles(req.user ?? {});
+  if (!roles.has('admin')) {
+    return res.status(403).json({ error: 'Rol insuficiente' });
+  }
+  next();
+}

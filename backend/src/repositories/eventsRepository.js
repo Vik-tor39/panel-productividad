@@ -29,6 +29,15 @@ export function countCompletedToday() {
   return row.count;
 }
 
+export function countCompletedTodayForUser(userId) {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS count FROM events WHERE user_id = ? AND date(completed_at) = date('now')`,
+    )
+    .get(userId);
+  return row.count;
+}
+
 export function countByUser() {
   return db
     .prepare(`SELECT username, user_id, COUNT(*) AS count FROM events GROUP BY user_id, username ORDER BY count DESC`)
@@ -41,7 +50,30 @@ export function countByDay() {
     .all();
 }
 
+export function countByDayForUser(userId) {
+  return db
+    .prepare(
+      `SELECT date(completed_at) AS day, COUNT(*) AS count
+       FROM events
+       WHERE user_id = ?
+       GROUP BY day
+       ORDER BY day DESC`,
+    )
+    .all(userId);
+}
+
 export function countTotalEvents() {
   const row = db.prepare('SELECT COUNT(*) AS count FROM events').get();
   return row.count;
+}
+
+export function countGlobalByUserAndDay() {
+  return db
+    .prepare(
+      `SELECT username, user_id, date(completed_at) AS day, COUNT(*) AS count
+       FROM events
+       GROUP BY user_id, username, day
+       ORDER BY username, day`,
+    )
+    .all();
 }

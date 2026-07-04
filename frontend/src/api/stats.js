@@ -7,3 +7,7 @@ export function getSummary() {
 export function getAdminStats() {
   return get('/stats/admin');
 }
+
+export function getGlobalStats() {
+  return get('/stats/global');
+}

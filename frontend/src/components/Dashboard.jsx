@@ -3,10 +3,12 @@ import { keycloak, hasRole } from '../keycloak.js';
 import { getSummary } from '../api/stats.js';
 import { StatCard } from './StatCard.jsx';
 import { AdminPanel } from './AdminPanel.jsx';
+import { GlobalStatsPanel } from './GlobalStatsPanel.jsx';
 
 export function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
+  const [showGlobalStats, setShowGlobalStats] = useState(false);
 
   useEffect(() => {
     getSummary()
@@ -31,31 +33,11 @@ export function Dashboard() {
       {summary && (
         <>
           <div className="stat-grid">
-            <StatCard label="Tareas completadas hoy" value={summary.completadas_hoy} />
+            <StatCard label="Mis tareas completadas hoy" value={summary.completadas_hoy} />
           </div>
 
           <section className="panel">
-            <h2>Por usuario</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Usuario</th>
-                  <th>Tareas completadas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.por_usuario.map((row) => (
-                  <tr key={row.user_id}>
-                    <td>{row.username}</td>
-                    <td>{row.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section className="panel">
-            <h2>Por día</h2>
+            <h2>Mis tareas por día</h2>
             <table>
               <thead>
                 <tr>
@@ -77,6 +59,15 @@ export function Dashboard() {
       )}
 
       {hasRole('admin') && <AdminPanel />}
+
+      {hasRole('admin') && (
+        <section className="panel">
+          <button onClick={() => setShowGlobalStats((prev) => !prev)}>
+            {showGlobalStats ? 'Ocultar' : 'Ver'} estadísticas globales (Admin)
+          </button>
+          {showGlobalStats && <GlobalStatsPanel />}
+        </section>
+      )}
     </div>
   );
 }

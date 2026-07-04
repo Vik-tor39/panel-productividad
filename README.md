@@ -105,9 +105,19 @@ VITE_API_BASE_URL=http://localhost:3000/api
 ```
 GET  /api/health                    → { ok, ts }
 POST /api/integration/receive        → recibe evento cifrado de Sistema A [requiere JWT]
-GET  /api/stats/summary              → { completadas_hoy, por_usuario, por_dia } [requiere JWT, role: user]
-GET  /api/stats/admin                → estadísticas extendidas [requiere JWT, role: admin]
+GET  /api/stats/summary              → { completadas_hoy, por_dia } del usuario autenticado [requiere JWT, role: user]
+GET  /api/stats/admin                → { completadas_hoy, por_usuario, por_dia, total_eventos } de TODOS los usuarios [requiere JWT, role: admin]
+GET  /api/stats/global               → { stats: [{ usuario, totalTareas, porDia }] } de TODOS los usuarios [requiere JWT, role: admin]
 ```
+
+## RBAC — vista de administrador
+
+El dashboard tiene dos niveles de visibilidad, ambos resueltos con el rol que Keycloak incluye en el JWT (sin lógica de auth propia):
+
+- **Usuario normal (`role: user`)**: `/api/stats/summary` devuelve únicamente sus propias tareas (filtradas por el `sub` del JWT contra `events.user_id`). El dashboard muestra "Mis tareas completadas hoy" y "Mis tareas por día".
+- **Administrador (`role: admin`)**: además de lo anterior, ve el panel "Administración" (`/api/stats/admin`, total de eventos global) y puede activar "Ver estadísticas globales (Admin)" (`/api/stats/global`), que carga bajo demanda una tabla con el total de tareas y el desglose por día de **todos** los usuarios.
+
+En el backend, `/api/stats/global` está protegido por un middleware dedicado `requireAdmin` (`backend/src/middleware/auth.js`) que responde `403 { "error": "Rol insuficiente" }` si el rol `admin` no está presente en el token — mismo criterio de roles que `requireRole`, pero con el mensaje de error específico pedido para este endpoint.
 
 ### Contrato del endpoint receptor
 
@@ -144,7 +154,7 @@ backend/
 frontend/
   src/
     api/            # cliente HTTP hacia el backend
-    components/     # Dashboard, AdminPanel, StatCard
+    components/     # Dashboard, AdminPanel, GlobalStatsPanel, StatCard
     keycloak.js      # inicialización de keycloak-js
 ```
 
@@ -153,3 +163,4 @@ frontend/
 - Todo el flujo de autenticación pasa por Keycloak vía validación de JWT contra JWKS — no hay login propio.
 - El endpoint receptor es estricto: rechaza cualquier payload que no cumpla exactamente el schema esperado, sin intentar normalizar o adivinar datos mal formados. No se persisten datos parciales.
 - El cifrado/descifrado se delega completamente a Vault Transit; el backend nunca maneja claves criptográficas directamente.
+- Las estadísticas personales (`/api/stats/summary`) se filtran en el backend por el `sub` del JWT, no solo se ocultan en el frontend — un usuario sin rol `admin` no puede obtener datos de otros usuarios ni siquiera llamando al endpoint directamente. Los endpoints agregados (`/api/stats/admin`, `/api/stats/global`) están protegidos con middlewares de rol (`requireRole('admin')` / `requireAdmin`) evaluados sobre los claims del JWT.
